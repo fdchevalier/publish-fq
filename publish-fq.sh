@@ -1,9 +1,9 @@
 #!/bin/bash
 # Title: publish-fq.sh
-# Version: 0.0
+# Version: 0.1
 # Author: Frédéric CHEVALIER <fcheval@txbiomed.org>
 # Created in: 2016-11-05
-# Modified in:
+# Modified in: 2017-04-18
 # License : GPL v3
 
 
@@ -20,6 +20,7 @@ aim="Publish fastq files the \"old Casava way\" (by samples or by projects)."
 # Versions #
 #==========#
 
+# v0.1 - 2017-04-18: Flow cell ID automatically set / samplesheet file copy / auto clean
 # v0.0 - 2016-11-05: creation
 
 version=$(grep -i -m 1 "version" "$0" | cut -d ":" -f 2 | sed "s/^ *//g")
@@ -117,8 +118,7 @@ function ProgressBar {
 
         # Build progressbar strings and print the ProgressBar line
         # Output example:
-        # Progress : [########################################] 100%
-        #printf "\rProgress : [${_fill// /=}${_empty// / }] ${_progress}%%"
+        # Progress : [========================================] 100%
         printf "\r\e[32mProgress:\e[00m [${_fill// /=}${_empty// / }] ${_progress}%%"
 
         [[ ${_progress} == 100 ]] && echo ""
@@ -139,7 +139,7 @@ function clean_up {
 # Dependencies #
 #==============#
 
-#test_dep
+test_dep perl
 
 
 
@@ -212,18 +212,13 @@ info "The fastq files will be published by $myout_type."
 # List fastq files
 list_fq=$(find "$dir_fq" -type f -name *.fastq*)
 
-
-#------------------#
-# Samplesheet info #
-#------------------#
-
-# Get flowcell ID   <= Alternatively get it from Reports/html/index.html (look for FC line)
-FC_ID=$(sed -n "/^\[Header\]/,/^\[Reads\]/p" "$samplesheet" | grep -i "^description" | cut -d "," -f 2)
+# Get flowcell ID and output directory
+FC_ID=$(grep -m 1 -i "flowcell" "$dir_fq/Reports/html/index.html" | perl -pe "s,.*src=.(.*?)/.*,\1,")
 dir_out="${dir_out%%/}/${FC_ID}"
 
 if [[ -z $FC_ID ]]
 then
-    error "Flowcell ID not found in the description field of the samplesheet header section. Exiting..." 1
+    error "Flowcell ID not set. It the Reports directory present? Exiting..." 1
 else
     info "Flowcell ID $FC_ID"
 fi
@@ -231,6 +226,10 @@ fi
 # Check if dir_out exists
 [[ -d "$dir_out" ]] && error "Output directory $dir_out exists already. Exiting... " 1
 
+
+#------------------#
+# Samplesheet info #
+#------------------#
 
 # Identify the first line of the [Data] section
 data_ln=$(grep -in "^\[data\]" "$samplesheet" | cut -d ":" -f 1)
@@ -289,6 +288,9 @@ then
 
         ((count++))
     done
+    
+    # Copy sample sheet in the output directory
+    cp -a "$samplesheet" "$dir_out/$(basename "$samplesheet")"
 
 fi
 
@@ -330,6 +332,9 @@ then
 
         ((count++))
     done
+    
+    # Copy sample sheet in the output directory
+    cp -a "$samplesheet" "$dir_out/$(basename "$samplesheet")"
 
 fi
 
@@ -365,5 +370,12 @@ then
         eval "cat <<< \"$(<"$email_tmpl")\"" | mail -s "Sequencing data available" -c janet@txbiomed.org $i
     done
 fi
+
+
+#----------#
+# Clean up #
+#----------#
+
+clean_up "$dir_fq"
 
 exit 0
