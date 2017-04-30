@@ -1,0 +1,9 @@
+Dear ${i%%@*}
+
+Your sequencing data are avaible on the ranch at the following location: \""$dir_out"\".
+
+Sequencing report from bcl2fq is also attached. To see the report, uncompress the tar.gz archive and open the index.html file present in Reports/html.
+
+Should you have any questions, please let me know.
+
+Roy GARCIA
