@@ -1,6 +1,7 @@
 Dear ${i%%@*}
 
-Your sequencing data are avaible on the ranch at the following location: \""$dir_out"\".
+Your sequencing data are available on the ranch at the following location: \""$dir_out"\".
+This sequencing run is related to the following project(s): $myprojects
 
 Sequencing report from bcl2fq is also attached. To see the report, uncompress the tar.gz archive and open the index.html file present in Reports/html.
 
