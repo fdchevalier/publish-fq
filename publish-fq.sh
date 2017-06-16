@@ -1,9 +1,9 @@
 #!/bin/bash
 # Title: publish-fq.sh
-# Version: 1.0
+# Version: 1.1
 # Author: Frédéric CHEVALIER <fcheval@txbiomed.org>
 # Created in: 2016-11-05
-# Modified in: 2017-04-30
+# Modified in: 2017-06-02
 # License : GPL v3
 
 
@@ -20,6 +20,7 @@ aim="Publish fastq files the \"old Casava way\" (by samples or by projects)."
 # Versions #
 #==========#
 
+# v1.1 - 2017-06-02: bug corrected when Sample_ID and Sample_name are different
 # v1.0 - 2017-04-30: safe script exit on any command errors / optional suffix to flow cell ID added / samplesheet reading improved because of DOS formatting / emailing step improved by sending email at once to all recipients and by adding project list / cleaning step updated
 # v0.1 - 2017-04-18: flow cell ID automatically set / samplesheet file copy / auto clean
 # v0.0 - 2016-11-05: creation
@@ -301,11 +302,19 @@ then
             # Create dir_out/Lane_sample
             mkdir -p "$dir_out/Lane${j}_${i}"
 
-            # Test if the file queue is empty
-            [[ -z $(echo "$list_fq" | grep "${i}_.*_L00${j}") ]] && error "Some fastq.gz files are expected but missing. Exiting..." 1
+            # Generate list of fastq files
+            if [[ -n $(echo "$list_fq" | grep "${i}_.*_L00${j}") ]]     # When Sample_ID and Sample_Name are the same
+            then
+                myfiles=$(echo "$list_fq" | grep "${i}_.*_L00${j}")
+            elif [[ -n $(echo "$list_fq" | grep "/${i}/") ]]            # When Sample_ID and Sample_Name are different, look at folder with Sample_ID
+            then
+                myfiles=$(echo "$list_fq" | grep "/${i}/")
+            else
+                error "fastq.gz files from $i sample are expected but missing. Exiting..." 1
+            fi
 
             # Copy any fastq corresponding to lane and sample in this directory (for test do touch only)
-            cp -t "$dir_out/Lane${j}_${i}" $(echo "$list_fq" | grep "${i}_.*_L00${j}")
+            cp -t "$dir_out/Lane${j}_${i}" $myfiles
         done
 
         ((count++))
@@ -346,11 +355,19 @@ then
 
             for k in $lane_lst
             do
-                # Test if the file queue is empty
-                [[ -z $(echo "$list_fq" | grep "${j}_.*_L00${k}") ]] && error "Some fastq.gz files are expected but missing. Exiting..." 1
+                # Generate list of fastq files
+                if [[ -n $(echo "$list_fq" | grep "${j}_.*_L00${k}") ]]     # When Sample_ID and Sample_Name are the same
+                then
+                    myfiles=$(echo "$list_fq" | grep "${j}_.*_L00${k}")
+                elif [[ -n $(echo "$list_fq" | grep "/${j}/") ]]            # When Sample_ID and Sample_Name are different, look at folder with Sample_ID
+                then
+                    myfiles=$(echo "$list_fq" | grep "/${j}/")
+                else
+                    error "fastq.gz files from $j sample are expected but missing. Exiting..." 1
+                fi
                 
                 # Copy any fastq corresponding to lane and sample in this directory (for test do touch only)
-                cp -t "$dir_out/Project_${count}/Sample_${j}" $(echo "$list_fq" | grep "${j}_.*_L00${k}")
+                cp -t "$dir_out/Project_${count}/Sample_${j}" $myfiles
             done
         done
 
